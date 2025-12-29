@@ -1,0 +1,14 @@
+{
+  "name": "ontario-health-sync",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker to sync Snowflake MARTS to D1 cache",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250107.0",
+    "wrangler": "^3.94.0"
+  }
+}

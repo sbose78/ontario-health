@@ -1,0 +1,19 @@
+name = "ontario-health-sync"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "ontario-health-cache"
+database_id = "1b818f56-47aa-4c11-b1fa-4c9e98009d0e"
+
+# Cron trigger - every 30 minutes
+[triggers]
+crons = ["*/30 * * * *"]
+
+# Environment variables (set as secrets via wrangler)
+# wrangler secret put SNOWFLAKE_ACCOUNT
+# wrangler secret put SNOWFLAKE_USER
+# wrangler secret put SNOWFLAKE_PRIVATE_KEY
+
