@@ -99,3 +99,4 @@ Then configure custom domain in Cloudflare Dashboard.
 - Cloudflare Pages → Functions → Real-time logs
 - Dashboard shows "Last updated" timestamp
 
+

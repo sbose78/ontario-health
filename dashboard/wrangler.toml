@@ -2,18 +2,10 @@ name = "ontario-health-dashboard"
 compatibility_date = "2024-12-01"
 pages_build_output_dir = "."
 
-[env.production]
-name = "ontario-health-dashboard"
+# D1 Database binding (cache layer for Snowflake data)
+[[d1_databases]]
+binding = "DB"
+database_name = "ontario-health-cache"
+database_id = "1b818f56-47aa-4c11-b1fa-4c9e98009d0e"
 
-# Bindings for Snowflake connection (set as secrets in Cloudflare)
-# wrangler pages secret put SNOWFLAKE_ACCOUNT
-# wrangler pages secret put SNOWFLAKE_USER
-# wrangler pages secret put SNOWFLAKE_PRIVATE_KEY
-# wrangler pages secret put SNOWFLAKE_WAREHOUSE
-# wrangler pages secret put SNOWFLAKE_DATABASE
-
-[[pages.redirects]]
-from = "/"
-to = "/index.html"
-status = 200
 

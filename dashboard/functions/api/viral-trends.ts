@@ -1,29 +1,14 @@
-// Cloudflare Pages Function - Viral Trends (4 weeks)
-
-import { executeQuery } from './_snowflake';
+// Cloudflare Pages Function - Viral Trends (from D1 cache)
 
 interface Env {
-  SNOWFLAKE_ACCOUNT: string;
-  SNOWFLAKE_USER: string;
-  SNOWFLAKE_PRIVATE_KEY: string;
-  SNOWFLAKE_WAREHOUSE: string;
-  SNOWFLAKE_DATABASE: string;
+  DB: D1Database;
 }
 
 export async function onRequest(context: { env: Env }): Promise<Response> {
   const { env } = context;
   
   try {
-    const config = {
-      account: env.SNOWFLAKE_ACCOUNT || 'BMWIVTO-JF10661',
-      user: env.SNOWFLAKE_USER || 'ontario_health_viewer',
-      privateKey: env.SNOWFLAKE_PRIVATE_KEY,
-      warehouse: env.SNOWFLAKE_WAREHOUSE || 'COMPUTE_WH',
-      database: env.SNOWFLAKE_DATABASE || 'ONTARIO_HEALTH',
-      schema: 'MARTS_SURVEILLANCE'
-    };
-    
-    const sql = `
+    const result = await env.DB.prepare(`
       SELECT 
         epi_year,
         epi_week,
@@ -31,14 +16,11 @@ export async function onRequest(context: { env: Env }): Promise<Response> {
         avg_viral_load,
         prev_week_avg,
         week_over_week_pct
-      FROM MARTS_SURVEILLANCE.rpt_viral_trends
-      WHERE epi_year = 2025 AND epi_week >= 48
+      FROM viral_trends
       ORDER BY epi_week DESC, virus_name
-    `;
+    `).all();
     
-    const rows = await executeQuery(config, sql);
-    
-    return new Response(JSON.stringify(rows), {
+    return new Response(JSON.stringify(result.results), {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
@@ -47,10 +29,12 @@ export async function onRequest(context: { env: Env }): Promise<Response> {
     });
     
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: 'Failed to fetch trends', message: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: 'Failed to fetch trends', 
+      message: error.message 
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
   }
 }
-

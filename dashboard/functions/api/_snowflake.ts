@@ -2,9 +2,11 @@
 // Uses Snowflake SQL API (REST) instead of Node SDK
 
 interface SnowflakeConfig {
-  account: string;
+  account: string;           // Full account identifier for API URL (BMWIVTO-JF10661)
+  accountLocator: string;    // Org-account for JWT (BMWIVTO-BG45124)
   user: string;
   privateKey: string;
+  publicKeyFP: string;       // SHA256 fingerprint of public key
   warehouse: string;
   database: string;
   schema: string;
@@ -12,7 +14,7 @@ interface SnowflakeConfig {
 
 export async function executeQuery(config: SnowflakeConfig, sql: string): Promise<any[]> {
   // Generate JWT token for authentication
-  const jwt = await generateJWT(config.account, config.user, config.privateKey);
+  const jwt = await generateJWT(config.accountLocator, config.user, config.privateKey, config.publicKeyFP);
   
   // Snowflake SQL API endpoint
   const url = `https://${config.account}.snowflakecomputing.com/api/v2/statements`;
@@ -22,6 +24,8 @@ export async function executeQuery(config: SnowflakeConfig, sql: string): Promis
     headers: {
       'Authorization': `Bearer ${jwt}`,
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'OntarioHealthDashboard/1.0',
       'X-Snowflake-Authorization-Token-Type': 'KEYPAIR_JWT'
     },
     body: JSON.stringify({
@@ -55,10 +59,10 @@ export async function executeQuery(config: SnowflakeConfig, sql: string): Promis
   return [];
 }
 
-async function generateJWT(account: string, user: string, privateKeyPEM: string): Promise<string> {
+async function generateJWT(account: string, user: string, privateKeyPEM: string, publicKeyFP: string): Promise<string> {
   // Parse account to get qualified name
   const accountName = account.toUpperCase();
-  const publicKeyFp = await getPublicKeyFingerprint(privateKeyPEM);
+  const userName = user.toUpperCase();
   
   // JWT header
   const header = {
@@ -69,8 +73,8 @@ async function generateJWT(account: string, user: string, privateKeyPEM: string)
   // JWT payload
   const now = Math.floor(Date.now() / 1000);
   const payload = {
-    iss: `${accountName}.${user.toUpperCase()}.${publicKeyFp}`,
-    sub: `${accountName}.${user.toUpperCase()}`,
+    iss: `${accountName}.${userName}.SHA256:${publicKeyFP}`,
+    sub: `${accountName}.${userName}`,
     iat: now,
     exp: now + 3600 // 1 hour expiry
   };
@@ -84,18 +88,6 @@ async function generateJWT(account: string, user: string, privateKeyPEM: string)
   const signature = await signRS256(signatureInput, privateKeyPEM);
   
   return `${signatureInput}.${signature}`;
-}
-
-async function getPublicKeyFingerprint(privateKeyPEM: string): Promise<string> {
-  // Extract public key and compute SHA256 fingerprint
-  // For Cloudflare Workers, we'll use the Web Crypto API
-  const privateKey = await importPrivateKey(privateKeyPEM);
-  const publicKey = await crypto.subtle.exportKey('spki', privateKey);
-  const publicKeyHash = await crypto.subtle.digest('SHA-256', publicKey);
-  return Array.from(new Uint8Array(publicKeyHash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-    .toUpperCase();
 }
 
 async function importPrivateKey(pem: string): Promise<CryptoKey> {
@@ -143,4 +135,5 @@ function base64UrlEncode(data: string | ArrayBuffer): string {
     .replace(/\//g, '_')
     .replace(/=/g, '');
 }
+
 

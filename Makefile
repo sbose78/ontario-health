@@ -26,6 +26,7 @@ help:
 	@echo "  make ingest-wastewater   Fetch latest wastewater surveillance data"
 	@echo "  make ingest-ed           Fetch current ED wait times"
 	@echo "  make ingest-all          Run all ingestors"
+	@echo "  make sync-d1             Sync Snowflake → D1 cache (for dashboard)"
 	@echo ""
 	@echo "Monitoring:"
 	@echo "  make verify         Check data freshness and pipeline health"
@@ -84,6 +85,11 @@ ingest-ed:
 ingest-all:
 	@echo "Running all ingestors..."
 	@$(PYTHON) $(PIPELINE)/run_ingestion.py all
+
+# Sync to D1 (for public dashboard)
+sync-d1:
+	@echo "Syncing Snowflake → D1 cache..."
+	@$(PYTHON) $(PIPELINE)/sync_to_d1.py
 
 # Monitoring and verification
 verify:

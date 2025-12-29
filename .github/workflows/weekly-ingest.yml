@@ -78,6 +78,11 @@ jobs:
           cd pipeline
           python run_ingestion.py ${{ steps.dataset.outputs.dataset }}
 
+      - name: Sync to D1 cache (for public dashboard)
+        run: |
+          cd pipeline
+          python sync_to_d1.py
+
       - name: Verify data freshness
         run: |
           cd pipeline
