@@ -11,8 +11,8 @@ from pipeline.config import (
     SNOWFLAKE_USER,
     SCHEMA_RAW,
     SCHEMA_MARTS_SURVEILLANCE,
-    get_snowflake_token,
-    TOKEN_FILE
+    get_private_key_bytes,
+    PRIVATE_KEY_FILE
 )
 
 
@@ -24,26 +24,26 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(SNOWFLAKE_ACCOUNT, "BMWIVTO-JF10661")
     
     def test_snowflake_user(self):
-        """Verify Snowflake user is set."""
-        self.assertEqual(SNOWFLAKE_USER, "SBOSE78")
+        """Verify Snowflake user is service account."""
+        self.assertEqual(SNOWFLAKE_USER, "ontario_health_svc")
     
     def test_schema_names(self):
         """Verify schema naming conventions."""
         self.assertEqual(SCHEMA_RAW, "RAW")
         self.assertEqual(SCHEMA_MARTS_SURVEILLANCE, "MARTS_SURVEILLANCE")
     
-    def test_token_file_exists(self):
-        """Check if token file exists."""
-        self.assertTrue(TOKEN_FILE.exists(), 
-                       f"Token file not found at {TOKEN_FILE}")
+    def test_private_key_file_exists(self):
+        """Check if private key file exists."""
+        from config import PRIVATE_KEY_FILE
+        self.assertTrue(PRIVATE_KEY_FILE.exists(), 
+                       f"Private key file not found at {PRIVATE_KEY_FILE}")
     
-    def test_token_readable(self):
-        """Verify token file can be read."""
-        token = get_snowflake_token()
-        self.assertIsInstance(token, str)
-        self.assertGreater(len(token), 0)
-        # PAT tokens are JWTs, should have 3 parts
-        self.assertEqual(len(token.split('.')), 3)
+    def test_private_key_readable(self):
+        """Verify private key file can be read and is valid."""
+        from config import get_private_key_bytes
+        key_bytes = get_private_key_bytes()
+        self.assertIsInstance(key_bytes, bytes)
+        self.assertGreater(len(key_bytes), 0)
 
 
 if __name__ == "__main__":

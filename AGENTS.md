@@ -133,14 +133,14 @@ This separation makes it clear which data is current vs archived.
 
 ### Initial Setup (100% Repeatable)
 
-1. **Python environment**: `make setup`
-2. **Authentication keys**: Already generated at `~/.snowflake/ontario_health_key.p8`
-3. **Snowflake database**: `make db-setup`
-4. **Snowflake migrations**: `make migrate` (lists SQL files to run in Web UI)
-   - Run `sql/migrations/001_create_service_account.sql` as ACCOUNTADMIN
-5. **Test connections**: 
-   - `make test` (Python with PAT)
-   - `make test-dbt` (dbt with service account)
+1. **Python environment**: `make setup` (creates venv + generates RSA key pair)
+2. **Snowflake migrations**: `make migrate` (lists SQL files)
+   - Run all migrations in `sql/migrations/` in order (001-006)
+   - **Critical**: Run `005_create_service_account.sql` to create the user
+3. **Test connection**: `make test`
+4. **Load data**: `make ingest-all`
+
+**Authentication**: Service account (`ontario_health_svc`) with key-pair auth for everything.
 
 All SQL is versioned in `sql/migrations/` - no manual setup needed beyond running the migration scripts in order.
 
@@ -166,11 +166,14 @@ python pipeline/run_ingestion.py all
 **Schedule**:
 - Wastewater: Wednesdays 6am EST
 - ED Wait Times: Every 3 hours
+- On merge to main: All ingestors
 
 **Secrets Required**:
-- `SNOWFLAKE_PAT_TOKEN` - Your PAT
 - `SNOWFLAKE_ACCOUNT` - `BMWIVTO-JF10661`
-- `SNOWFLAKE_USER` - `SBOSE78`
+- `SNOWFLAKE_USER` - `ontario_health_svc`
+- `SNOWFLAKE_PRIVATE_KEY` - Contents of `~/.snowflake/ontario_health_key.p8`
+
+**Authentication**: Service account with key-pair (same for local + CI/CD)
 
 **Manual Trigger**: GitHub → Actions → "Ontario Health Data Ingestion" → Run workflow
 
@@ -218,12 +221,13 @@ python pipeline/run_ingestion.py all
 
 ### Connection Errors
 
-**Symptom**: `Network policy is required` or `Invalid OAuth access token`
+**Symptom**: `JWT token is invalid` or `User does not exist`
 
 **Fix**: 
-1. Check PAT expiry in Snowflake UI
-2. Regenerate and update `~/.snowflake/ontario_health_token`
+1. Verify service account exists: Run `sql/migrations/005_create_service_account.sql`
+2. Check private key exists: `ls ~/.snowflake/ontario_health_key.p8`
 3. Verify network policy includes your IP: Snowflake Admin → Security → Network Policies
+4. Test: `make test`
 
 ### Stale MARTS Data
 

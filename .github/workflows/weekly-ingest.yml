@@ -49,11 +49,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r pipeline/requirements.txt
 
-      - name: Create Snowflake token file
+      - name: Create Snowflake private key file
         run: |
           mkdir -p ~/.snowflake
-          echo "${{ secrets.SNOWFLAKE_PAT_TOKEN }}" > ~/.snowflake/ontario_health_token
-          chmod 600 ~/.snowflake/ontario_health_token
+          echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.snowflake/ontario_health_key.p8
+          chmod 600 ~/.snowflake/ontario_health_key.p8
 
       - name: Determine dataset to ingest
         id: dataset
@@ -77,9 +77,6 @@ jobs:
         run: |
           cd pipeline
           python run_ingestion.py ${{ steps.dataset.outputs.dataset }}
-        env:
-          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
 
       - name: Verify data freshness
         run: |
