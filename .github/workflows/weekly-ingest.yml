@@ -82,6 +82,8 @@ jobs:
         run: |
           cd pipeline
           python sync_to_d1.py
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Verify data freshness
         run: |
