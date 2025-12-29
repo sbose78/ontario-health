@@ -79,9 +79,9 @@ async function loadViralTrends() {
     }
 }
 
-// Render simple trends chart (ASCII-style)
+// Render viral trends chart using Chart.js
 function renderTrendsChart(data) {
-    const container = document.getElementById('trends-chart');
+    const canvas = document.getElementById('viral-trends-chart');
     
     // Group by virus
     const byVirus = {};
@@ -92,31 +92,158 @@ function renderTrendsChart(data) {
         byVirus[row.virus_name].push(row);
     });
     
-    container.innerHTML = '<table><thead><tr><th>Week</th>' +
-        Object.keys(byVirus).map(v => `<th>${v}</th>`).join('') +
-        '</tr></thead><tbody>';
+    // Get unique weeks, sorted
+    const weeks = [...new Set(data.map(r => r.epi_week))].sort((a, b) => a - b);
     
-    // Get all unique weeks
-    const weeks = [...new Set(data.map(r => r.epi_week))].sort((a, b) => b - a).slice(0, 4);
-    
-    weeks.forEach(week => {
-        let row = `<tr><td><strong>Week ${week}</strong></td>`;
-        Object.keys(byVirus).forEach(virus => {
-            const weekData = byVirus[virus].find(d => d.epi_week === week);
-            if (weekData) {
-                const change = weekData.week_over_week_pct || 0;
-                const arrow = change > 0 ? '↑' : change < 0 ? '↓' : '→';
-                const color = change > 0 ? 'var(--danger)' : change < 0 ? 'var(--success)' : 'var(--text-light)';
-                row += `<td>${weekData.avg_viral_load.toFixed(1)} <span style="color: ${color}">${arrow} ${Math.abs(change)}%</span></td>`;
-            } else {
-                row += '<td>--</td>';
-            }
-        });
-        row += '</tr>';
-        container.querySelector('tbody').innerHTML += row;
+    // Create datasets for each virus
+    const datasets = Object.keys(byVirus).map(virus => {
+        const color = getVirusColor(virus);
+        const virusData = byVirus[virus].sort((a, b) => a.epi_week - b.epi_week);
+        
+        return {
+            label: virus,
+            data: weeks.map(week => {
+                const weekData = virusData.find(d => d.epi_week === week);
+                return weekData ? weekData.avg_viral_load : null;
+            }),
+            borderColor: color,
+            backgroundColor: color + '20',
+            borderWidth: 3,
+            tension: 0.3,
+            fill: false
+        };
     });
     
-    container.innerHTML += '</tbody></table>';
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: weeks.map(w => `Week ${w}`),
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Viral Load (copies/mL)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Get color for each virus
+function getVirusColor(virus) {
+    const colors = {
+        'Influenza A': '#d63031',
+        'COVID-19': '#0984e3',
+        'RSV': '#fdcb6e',
+        'Influenza B': '#6c5ce7'
+    };
+    return colors[virus] || '#636e72';
+}
+
+// Load and render ED wait times history
+async function loadEDHistory() {
+    try {
+        const response = await fetch(`${API_BASE}/ed-history`);
+        const data = await response.json();
+        
+        renderEDHistoryChart(data);
+        
+    } catch (error) {
+        console.error('Error loading ED history:', error);
+    }
+}
+
+// Render ED history chart
+function renderEDHistoryChart(data) {
+    const canvas = document.getElementById('ed-history-chart');
+    
+    // Group by hospital
+    const byHospital = {};
+    data.forEach(row => {
+        if (!byHospital[row.hospital_name]) {
+            byHospital[row.hospital_name] = [];
+        }
+        byHospital[row.hospital_name].push(row);
+    });
+    
+    // Create dataset for each hospital
+    const datasets = Object.keys(byHospital).map((hospital, idx) => {
+        const colors = ['#0984e3', '#d63031', '#00b894'];
+        const hospitalData = byHospital[hospital].sort((a, b) => 
+            new Date(a.scraped_at).getTime() - new Date(b.scraped_at).getTime()
+        );
+        
+        return {
+            label: hospital.replace(' Hospital', '').replace('Trafalgar Memorial', 'TM'),
+            data: hospitalData.map(d => ({
+                x: new Date(d.scraped_at),
+                y: d.wait_total_minutes
+            })),
+            borderColor: colors[idx % colors.length],
+            backgroundColor: colors[idx % colors.length] + '40',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: false
+        };
+    });
+    
+    new Chart(canvas, {
+        type: 'line',
+        data: { datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'hour',
+                        displayFormats: {
+                            hour: 'MMM d, ha'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Wait Time (minutes)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            const hours = Math.floor(value / 60);
+                            const mins = value % 60;
+                            return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 // Determine viral load severity
@@ -173,6 +300,7 @@ async function init() {
         loadRespiratoryData(),
         loadEDData(),
         loadViralTrends(),
+        loadEDHistory(),
         loadFreshness()
     ]);
     
@@ -181,6 +309,7 @@ async function init() {
         loadRespiratoryData();
         loadEDData();
         loadFreshness();
+        loadEDHistory();
     }, 5 * 60 * 1000);
 }
 

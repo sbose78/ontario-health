@@ -41,11 +41,22 @@
         <!-- Viral Trends Chart -->
         <section class="card">
             <div class="card-header">
-                <h2>📈 4-Week Viral Trends</h2>
-                <span class="badge">Ontario</span>
+                <h2>📈 4-Week Viral Load Trends</h2>
+                <span class="badge">Ontario Wastewater</span>
             </div>
-            <div id="trends-chart" class="chart-container">
-                <div class="loading">Loading...</div>
+            <div class="chart-container">
+                <canvas id="viral-trends-chart"></canvas>
+            </div>
+        </section>
+
+        <!-- ED Wait Times History -->
+        <section class="card">
+            <div class="card-header">
+                <h2>⏱️ ED Wait Times History (24 hours)</h2>
+                <span class="badge">Halton Healthcare</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="ed-history-chart"></canvas>
             </div>
         </section>
 
@@ -71,6 +82,8 @@
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

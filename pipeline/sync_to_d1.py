@@ -71,9 +71,10 @@ VALUES ('{row['VIRUS_NAME']}', {row['EPI_YEAR']}, {row['EPI_WEEK']}, {row['SITES
 
 
 def sync_ed_status():
-    """Sync ED wait times."""
+    """Sync ED wait times (current + history)."""
     print("Syncing ED wait times...")
     
+    # Current status
     rows = query_snowflake("SELECT * FROM MARTS_SURVEILLANCE.rpt_ed_current")
     
     if not rows:
@@ -91,7 +92,37 @@ VALUES ('{row['HOSPITAL_NAME']}', {row['WAIT_HOURS']}, {row['WAIT_MINUTES']}, {r
 """
     
     execute_d1_sql(sql)
-    print(f"  ✓ Synced {len(rows)} hospitals")
+    print(f"  ✓ Synced {len(rows)} hospitals (current)")
+    
+    # Historical readings (last 24 hours)
+    history_rows = query_snowflake("""
+        SELECT 
+            hospital_name,
+            wait_hours,
+            wait_minutes,
+            wait_total_minutes,
+            scraped_at,
+            wait_severity
+        FROM MARTS_SURVEILLANCE.rpt_ed_wait_times
+        WHERE scraped_at >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+        ORDER BY scraped_at DESC
+    """)
+    
+    if history_rows:
+        # Clear old history, keep last 24h
+        history_sql = "DELETE FROM ed_history WHERE scraped_at < datetime('now', '-24 hours');\n"
+        
+        for row in history_rows:
+            scraped_at = row['SCRAPED_AT'].isoformat() if row['SCRAPED_AT'] else ''
+            # Check if already exists (avoid duplicates on re-sync)
+            history_sql += f"""
+INSERT OR IGNORE INTO ed_history (hospital_name, wait_hours, wait_minutes, wait_total_minutes, scraped_at, wait_severity)
+VALUES ('{row['HOSPITAL_NAME']}', {row['WAIT_HOURS']}, {row['WAIT_MINUTES']}, {row['WAIT_TOTAL_MINUTES']}, 
+        '{scraped_at}', '{row['WAIT_SEVERITY']}');
+"""
+        
+        execute_d1_sql(history_sql)
+        print(f"  ✓ Synced {len(history_rows)} history readings (24h)")
 
 
 def sync_viral_trends():
