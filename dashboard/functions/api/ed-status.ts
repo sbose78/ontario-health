@@ -1,5 +1,7 @@
 // Cloudflare Pages Function - Current ED Wait Times
 
+import { executeQuery } from './_snowflake';
+
 interface Env {
   SNOWFLAKE_ACCOUNT: string;
   SNOWFLAKE_USER: string;
@@ -11,22 +13,15 @@ interface Env {
 export async function onRequest(context: { env: Env }): Promise<Response> {
   const { env } = context;
   
-  const snowflake = await import('snowflake-sdk');
-  
   try {
-    const connection = snowflake.createConnection({
+    const config = {
       account: env.SNOWFLAKE_ACCOUNT || 'BMWIVTO-JF10661',
-      username: env.SNOWFLAKE_USER || 'ontario_health_viewer',
+      user: env.SNOWFLAKE_USER || 'ontario_health_viewer',
       privateKey: env.SNOWFLAKE_PRIVATE_KEY,
       warehouse: env.SNOWFLAKE_WAREHOUSE || 'COMPUTE_WH',
       database: env.SNOWFLAKE_DATABASE || 'ONTARIO_HEALTH',
-      schema: 'MARTS_SURVEILLANCE',
-      authenticator: 'SNOWFLAKE_JWT'
-    });
-    
-    await new Promise((resolve, reject) => {
-      connection.connect((err) => err ? reject(err) : resolve(undefined));
-    });
+      schema: 'MARTS_SURVEILLANCE'
+    };
     
     const sql = `
       SELECT 
@@ -41,14 +36,7 @@ export async function onRequest(context: { env: Env }): Promise<Response> {
       ORDER BY wait_total_minutes DESC
     `;
     
-    const rows = await new Promise<any[]>((resolve, reject) => {
-      connection.execute({
-        sqlText: sql,
-        complete: (err, stmt, rows) => err ? reject(err) : resolve(rows || [])
-      });
-    });
-    
-    connection.destroy();
+    const rows = await executeQuery(config, sql);
     
     return new Response(JSON.stringify(rows), {
       headers: {

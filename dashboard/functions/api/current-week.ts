@@ -1,5 +1,6 @@
 // Cloudflare Pages Function - Current Week Respiratory Surveillance
-// Returns latest week viral load data from Snowflake
+
+import { executeQuery } from './_snowflake';
 
 interface Env {
   SNOWFLAKE_ACCOUNT: string;
@@ -12,44 +13,19 @@ interface Env {
 export async function onRequest(context: { env: Env }): Promise<Response> {
   const { env } = context;
   
-  // Import snowflake connector
-  const snowflake = await import('snowflake-sdk');
-  
   try {
-    // Create connection using viewer service account
-    const connection = snowflake.createConnection({
+    const config = {
       account: env.SNOWFLAKE_ACCOUNT || 'BMWIVTO-JF10661',
-      username: env.SNOWFLAKE_USER || 'ontario_health_viewer',
+      user: env.SNOWFLAKE_USER || 'ontario_health_viewer',
       privateKey: env.SNOWFLAKE_PRIVATE_KEY,
       warehouse: env.SNOWFLAKE_WAREHOUSE || 'COMPUTE_WH',
       database: env.SNOWFLAKE_DATABASE || 'ONTARIO_HEALTH',
-      schema: 'MARTS_SURVEILLANCE',
-      authenticator: 'SNOWFLAKE_JWT'
-    });
+      schema: 'MARTS_SURVEILLANCE'
+    };
     
-    await new Promise((resolve, reject) => {
-      connection.connect((err) => {
-        if (err) reject(err);
-        else resolve(undefined);
-      });
-    });
-    
-    // Query current week data
     const sql = 'SELECT * FROM MARTS_SURVEILLANCE.rpt_current_week ORDER BY virus_name';
+    const rows = await executeQuery(config, sql);
     
-    const rows = await new Promise<any[]>((resolve, reject) => {
-      connection.execute({
-        sqlText: sql,
-        complete: (err, stmt, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      });
-    });
-    
-    connection.destroy();
-    
-    // Return JSON
     return new Response(JSON.stringify(rows), {
       headers: {
         'Content-Type': 'application/json',

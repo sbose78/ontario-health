@@ -8,7 +8,6 @@
     "tail": "wrangler pages deployment tail"
   },
   "dependencies": {
-    "snowflake-sdk": "^1.13.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241127.0",
