@@ -1,0 +1,23 @@
+# Dashboard dependencies and build artifacts
+
+# Node modules
+node_modules/
+
+# Wrangler
+.wrangler/
+.dev.vars
+
+# Build outputs
+dist/
+.output/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+
+# Test files
+test_viewer_connection.py
+

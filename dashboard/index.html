@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ontario Health Surveillance Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🏥 Ontario Health Surveillance</h1>
+            <p class="subtitle">Real-time respiratory infection and hospital capacity monitoring</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Respiratory Surveillance Section -->
+        <section class="card">
+            <div class="card-header">
+                <h2>🦠 Respiratory Surveillance (Week 51, 2025)</h2>
+                <span class="badge">Wastewater Data</span>
+            </div>
+            <div id="respiratory-grid" class="grid">
+                <div class="loading">Loading...</div>
+            </div>
+        </section>
+
+        <!-- ED Wait Times Section -->
+        <section class="card">
+            <div class="card-header">
+                <h2>🚑 Emergency Department Wait Times</h2>
+                <span class="badge badge-live">Live</span>
+            </div>
+            <div id="ed-grid" class="grid">
+                <div class="loading">Loading...</div>
+            </div>
+            <p class="source-note">Source: Halton Healthcare | Updated every 3 hours</p>
+        </section>
+
+        <!-- Viral Trends Chart -->
+        <section class="card">
+            <div class="card-header">
+                <h2>📈 4-Week Viral Trends</h2>
+                <span class="badge">Ontario</span>
+            </div>
+            <div id="trends-chart" class="chart-container">
+                <div class="loading">Loading...</div>
+            </div>
+        </section>
+
+        <!-- Data Freshness -->
+        <section class="card">
+            <div class="card-header">
+                <h2>📊 Data Freshness</h2>
+            </div>
+            <div id="freshness-table">
+                <div class="loading">Loading...</div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>
+                Data sources: 
+                <a href="https://health-infobase.canada.ca/wastewater/" target="_blank">Health Canada Wastewater Surveillance</a> | 
+                <a href="https://www.haltonhealthcare.on.ca/emergency-department" target="_blank">Halton Healthcare</a>
+            </p>
+            <p>Ontario Health Data Pipeline | Last updated: <span id="last-update">--</span></p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
