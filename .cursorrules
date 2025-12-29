@@ -1,0 +1,184 @@
+# Ontario Health Data Pipeline - Cursor AI Rules
+
+# Project Context
+This is a Snowflake-native data pipeline for Ontario respiratory surveillance data.
+Focus on pediatric/school infections, wastewater monitoring, and ED capacity.
+
+# Code Style
+
+## Python
+- Use Python 3.11+ type hints
+- Inherit from BaseIngestor for new CKAN data sources
+- Store Snowflake connection logic in config.py
+- Use pandas for data transformation before Snowflake load
+- Handle NULL values explicitly (don't assume data quality)
+- Log progress to stdout (print statements are fine for batch jobs)
+
+## SQL
+- Use UPPERCASE for keywords (SELECT, FROM, WHERE)
+- Use snake_case for table/column names
+- Prefix views: fct_ (facts), dim_ (dimensions), rpt_ (reports)
+- Always qualify table names with schema (RAW.WASTEWATER_SURVEILLANCE)
+- Use Dynamic Tables for auto-refresh, Views for static/lightweight queries
+- Target lag for Dynamic Tables: 15min (staging), 1hour (marts)
+
+## File Organization
+- Python ingestors: pipeline/ingest_*.py
+- SQL DDL: sql/*.sql (numbered)
+- dbt models: dbt_project/models/staging/ and dbt_project/models/marts/
+- Documentation: AGENTS.md (architecture), SPEC.md (schemas & contracts)
+
+# Architecture Patterns
+
+## Ingestion
+- All ingestors write to RAW schema
+- Use write_pandas() for bulk loading
+- Store raw_json VARIANT column for debugging
+- Log to RAW.INGESTION_LOG table
+- Run via pipeline/run_ingestion.py (unified entry point)
+
+## Transformations
+- RAW → STAGING: Type casting, NULL handling (Dynamic Tables)
+- STAGING → MARTS: Business logic, aggregations (Dynamic Tables)
+- Use Snowflake-native features (Dynamic Tables) over dbt materializations
+- dbt role: Generate DDL, add tests, document lineage
+
+## Marts Organization
+- MARTS_SURVEILLANCE: Current surveillance data (wastewater, ED)
+- MARTS_HISTORICAL: Archived reference (2021 school/outbreak data)
+- MARTS_OPS: Pipeline health monitoring
+
+# Snowflake Conventions
+
+## Materialization Strategy
+- Use Dynamic Tables when data needs auto-refresh on upstream changes
+- Use Materialized Views for simple aggregations (SUM/AVG/COUNT)
+- Use Views for lightweight logic or rarely-queried reports
+- Warehouse: COMPUTE_WH (X-SMALL, 60s auto-suspend)
+
+## Naming
+- Schemas: UPPERCASE (RAW, STAGING, MARTS_SURVEILLANCE)
+- Tables/Views: lowercase with underscores
+- Dynamic Tables: Same naming as views (fct_*, rpt_*)
+- Staging area prefix: stg_
+
+# Data Quality
+
+## Validation Rules (see SPEC.md for full details)
+- Check for NULLs in required fields
+- Validate date ranges (epi_year >= 2020, reported_date in expected range)
+- Viral load must be >= 0
+- ED wait times < 720 minutes (12 hours sanity check)
+- Use dbt tests for automated validation
+
+## Monitoring
+- Check MARTS_OPS.rpt_data_freshness daily
+- Alert if latest_ingestion >6 hours old (ED) or >10 days (wastewater)
+- Verify row counts match expected volumes (see DATA_CONTRACT.md)
+
+# Known Issues & Workarounds
+
+## ED Scraping is Fragile
+- Website HTML changes break the regex parser
+- Always wrap scraping in try/except
+- Check for zero records and warn user
+- Store full HTML in raw_json for debugging
+
+## Wastewater Coverage Varies
+- Some weeks only have 2 Ontario sites instead of 11
+- This is upstream data quality (Health Canada), not our bug
+- Document in reports when site coverage is low
+
+## Historical Data is Archived
+- School cases and outbreaks are 2021 only
+- Don't expect fresh data from these sources
+- Keep in MARTS_HISTORICAL (not SURVEILLANCE)
+
+# Adding New Data Sources
+
+1. Create pipeline/ingest_*.py (use BaseIngestor pattern)
+2. Add RAW table DDL in sql/
+3. Add to run_ingestion.py choices
+4. Create MARTS views or Dynamic Tables
+5. Update MARTS_OPS.rpt_data_freshness
+6. Document in AGENTS.md and SPEC.md
+7. Add to GitHub Actions if automated
+
+# Testing
+
+## Manual Testing
+```bash
+# Test connection
+python pipeline/test_snowflake.py
+
+# Test single dataset
+python pipeline/run_ingestion.py wastewater
+
+# Verify data in Snowflake
+python -c "from pipeline.config import get_snowflake_connection; ..."
+```
+
+## dbt Tests (when implemented)
+```bash
+dbt test --select staging.*
+dbt test --select marts.*
+```
+
+# Deployment
+
+## Local Development
+- Use .venv for Python dependencies
+- Store PAT token in ~/.snowflake/ontario_health_token
+- Run ingestion scripts manually
+
+## Automated (GitHub Actions)
+- Schedule: Wastewater (weekly), ED (every 3h)
+- Secrets: SNOWFLAKE_PAT_TOKEN, SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER
+- Workflow: .github/workflows/weekly-ingest.yml
+
+# Common Tasks
+
+## Add a New Column
+1. ALTER TABLE in sql/ (use IF NOT EXISTS)
+2. Update ingestor transform() method
+3. Update DATA_CONTRACT.md schema
+4. Update downstream views/Dynamic Tables if needed
+
+## Debug Scraper
+1. Check RAW.INGESTION_LOG for error messages
+2. Manually run: python pipeline/ingest_ed_wait_times.py
+3. Inspect HTML: requests.get(URL).text
+4. Update regex in fetch_and_parse()
+
+## Refresh Dynamic Table Manually
+```sql
+ALTER DYNAMIC TABLE MARTS_SURVEILLANCE.fct_wastewater_weekly REFRESH;
+```
+
+## Check Dynamic Table Status
+```sql
+SHOW DYNAMIC TABLES IN SCHEMA MARTS_SURVEILLANCE;
+SELECT * FROM TABLE(INFORMATION_SCHEMA.DYNAMIC_TABLE_REFRESH_HISTORY());
+```
+
+# Security
+
+- Never commit PAT tokens (use secrets)
+- Don't log sensitive data (PII, credentials)
+- Network policy required for Snowflake access
+- GitHub Actions uses ephemeral token stored in secrets
+
+# Performance
+
+- Dynamic Tables only refresh when upstream changes (cost-efficient)
+- Avoid SELECT * in production views
+- Use WHERE filters on partitioned columns (date, epi_week)
+- Monitor warehouse credit usage in Snowflake UI
+
+# Documentation
+
+- Update AGENTS.md for architecture changes
+- Update SPEC.md for schema changes and data contracts
+- Update README.md for user-facing changes
+- Generate dbt docs: dbt docs generate && dbt docs serve
+

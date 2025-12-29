@@ -1,0 +1,116 @@
+# Ontario Health Data Pipeline - Git Ignore
+
+# ============================================================================
+# SECRETS - NEVER COMMIT
+# ============================================================================
+
+# Snowflake keys and tokens
+*.p8
+*.pem
+*_key
+*_key.pub
+*_token
+*.key
+*.pub
+
+# Environment variables
+.env
+.env.local
+
+# ============================================================================
+# Python
+# ============================================================================
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ============================================================================
+# dbt
+# ============================================================================
+
+# dbt artifacts
+ontario_health/target/
+ontario_health/dbt_packages/
+ontario_health/logs/
+*.log
+
+# dbt user files
+ontario_health/.user.yml
+
+# ============================================================================
+# IDEs
+# ============================================================================
+
+# VSCode
+.vscode/
+
+# PyCharm
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ============================================================================
+# OS
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# ============================================================================
+# Temporary / Generated Files
+# ============================================================================
+
+# Logs
+logs/
+*.log
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
+# Output files (unless explicitly tracked)
+output/
+

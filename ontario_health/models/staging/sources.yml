@@ -1,0 +1,83 @@
+version: 2
+
+sources:
+  - name: raw
+    database: ONTARIO_HEALTH
+    schema: RAW
+    description: "Landing zone for ingested data from Ontario Data Catalogue and Health Canada"
+    
+    tables:
+      - name: wastewater_surveillance
+        description: "Weekly wastewater viral load measurements (COVID-19, Influenza A/B, RSV)"
+        columns:
+          - name: id
+            description: "Primary key"
+            tests:
+              - unique
+              - not_null
+          
+          - name: epi_year
+            description: "Epidemiological year"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: [2020, 2021, 2022, 2023, 2024, 2025]
+          
+          - name: epi_week
+            description: "Epidemiological week (1-53)"
+            tests:
+              - not_null
+          
+          - name: virus_code
+            description: "Virus code (covN2, fluA, fluB, rsv)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['covN2', 'fluA', 'fluB', 'rsv']
+          
+          - name: viral_load_avg
+            description: "Average viral load (RNA copies/mL, population-weighted)"
+            tests:
+              - not_null
+      
+      - name: ed_wait_times
+        description: "Emergency department wait times scraped from Halton Healthcare"
+        columns:
+          - name: id
+            description: "Primary key"
+            tests:
+              - unique
+              - not_null
+          
+          - name: hospital_code
+            description: "Hospital identifier"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['georgetown', 'milton', 'oakville']
+          
+          - name: wait_total_minutes
+            description: "Total wait time in minutes"
+            tests:
+              - not_null
+      
+      - name: school_cases
+        description: "Historical school infection cases from 2021 (archived)"
+        columns:
+          - name: id
+            tests:
+              - unique
+              - not_null
+          
+          - name: reported_date
+            tests:
+              - not_null
+      
+      - name: outbreaks
+        description: "Historical education outbreak data (archived)"
+        columns:
+          - name: id
+            tests:
+              - unique
+              - not_null
+

@@ -1,0 +1,21 @@
+ontario_health:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: BMWIVTO-JF10661
+      user: ontario_health_svc
+      role: ontario_health_role
+      warehouse: COMPUTE_WH
+      database: ONTARIO_HEALTH
+      schema: STAGING
+      
+      # Authentication using key-pair (service account)
+      authenticator: snowflake_jwt
+      private_key_path: "{{ env_var('HOME') }}/.snowflake/ontario_health_key.p8"
+      
+      # Connection settings
+      threads: 4
+      client_session_keep_alive: False
+      query_tag: dbt_ontario_health
+

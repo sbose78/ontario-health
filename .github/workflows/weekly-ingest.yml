@@ -1,0 +1,84 @@
+name: Ontario Health Data Ingestion
+
+on:
+  # Wastewater: Weekly on Wednesdays at 6am EST (11:00 UTC)
+  # ED Wait Times: Every 3 hours (8 times/day)
+  schedule:
+    - cron: '0 11 * * 3'       # Wednesday 6am EST - wastewater
+    - cron: '0 */3 * * *'      # Every 3 hours - ED wait times
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      dataset:
+        description: 'Dataset to ingest'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - wastewater
+          - ed_wait_times
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r pipeline/requirements.txt
+
+      - name: Create Snowflake token file
+        run: |
+          mkdir -p ~/.snowflake
+          echo "${{ secrets.SNOWFLAKE_PAT_TOKEN }}" > ~/.snowflake/ontario_health_token
+          chmod 600 ~/.snowflake/ontario_health_token
+
+      - name: Determine dataset to ingest
+        id: dataset
+        run: |
+          # For scheduled runs: Wednesday = wastewater, other times = ed_wait_times
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "dataset=${{ inputs.dataset }}" >> $GITHUB_OUTPUT
+          elif [ "$(date +%u)" == "3" ] && [ "$(date +%H)" == "11" ]; then
+            echo "dataset=wastewater" >> $GITHUB_OUTPUT
+          else
+            echo "dataset=ed_wait_times" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run ingestion
+        run: |
+          cd pipeline
+          python run_ingestion.py ${{ steps.dataset.outputs.dataset }}
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+
+      - name: Verify data freshness
+        run: |
+          cd pipeline
+          python -c "
+          from config import get_snowflake_connection
+          conn = get_snowflake_connection()
+          cur = conn.cursor()
+          cur.execute('SELECT * FROM MARTS_OPS.rpt_data_freshness')
+          print('Data Freshness:')
+          for row in cur.fetchall():
+              print(f'  {row[0]}: {row[2]} ({row[4]:,} records)')
+          cur.close()
+          conn.close()
+          "
+

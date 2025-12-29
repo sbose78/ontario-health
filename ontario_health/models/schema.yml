@@ -1,0 +1,125 @@
+version: 2
+
+models:
+  - name: stg_wastewater
+    description: "Staging view for Ontario wastewater surveillance data"
+    columns:
+      - name: id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      
+      - name: epi_year
+        description: "Epidemiological year (Aug-Aug)"
+        tests:
+          - not_null
+      
+      - name: epi_week
+        description: "Epidemiological week (1-53)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 53
+      
+      - name: virus_name
+        description: "Human-readable virus name"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['COVID-19', 'Influenza A', 'Influenza B', 'RSV']
+      
+      - name: viral_load_avg
+        description: "Average viral load (higher = more transmission)"
+        tests:
+          - not_null
+  
+  - name: stg_ed_wait_times
+    description: "Staging view for ED wait times (Halton Healthcare)"
+    columns:
+      - name: id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      
+      - name: hospital_name
+        description: "Hospital name"
+        tests:
+          - not_null
+      
+      - name: wait_total_minutes
+        description: "Total wait time in minutes"
+        tests:
+          - not_null
+      
+      - name: wait_severity
+        description: "Wait time severity classification"
+        tests:
+          - accepted_values:
+              values: ['Low', 'Moderate', 'High', 'Critical']
+  
+  - name: fct_wastewater_weekly
+    description: |
+      **NOTE**: This is a Snowflake Dynamic Table (not dbt-materialized).
+      
+      Auto-refreshing fact table with TARGET_LAG = '1 hour'.
+      Updates automatically when new data arrives in RAW.WASTEWATER_SURVEILLANCE.
+      
+      Contains weekly viral load measurements for Ontario wastewater sites.
+    columns:
+      - name: epi_year
+        description: "Epidemiological year"
+      
+      - name: epi_week
+        description: "Epidemiological week"
+      
+      - name: virus_name
+        description: "Virus name (COVID-19, Influenza A, Influenza B, RSV)"
+      
+      - name: location
+        description: "Wastewater treatment site"
+      
+      - name: viral_load_avg
+        description: "Population-weighted viral RNA copies/mL"
+  
+  - name: rpt_current_week
+    description: |
+      Current week respiratory surveillance summary.
+      
+      Shows latest viral loads by virus type across Ontario reporting sites.
+    columns:
+      - name: epi_year
+        description: "Year of surveillance week"
+      
+      - name: epi_week
+        description: "Week number"
+      
+      - name: virus_name
+        description: "Virus name"
+      
+      - name: sites_reporting
+        description: "Number of Ontario sites reporting this week"
+      
+      - name: avg_viral_load
+        description: "Average viral load across all sites"
+  
+  - name: rpt_ed_current
+    description: |
+      Current emergency department wait times for Halton Healthcare network.
+      
+      Updated every 3 hours via web scraping.
+    columns:
+      - name: hospital_name
+        description: "Hospital name"
+      
+      - name: wait_total_minutes
+        description: "Total wait time to see physician (minutes)"
+      
+      - name: wait_severity
+        description: "Severity classification (Low/Moderate/High/Critical)"
+        tests:
+          - accepted_values:
+              values: ['Low', 'Moderate', 'High', 'Critical']
+

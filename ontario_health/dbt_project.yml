@@ -1,0 +1,50 @@
+
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models
+name: 'ontario_health'
+version: '1.0.0'
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'ontario_health'
+
+# These configurations specify where dbt should look for different types of files.
+# The `model-paths` config, for example, states that models in this project can be
+# found in the "models/" directory. You probably won't need to change these!
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+
+# Configuring models
+# Full documentation: https://docs.getdbt.com/docs/configuring-models
+
+# Snowflake-native approach: Most transformations use Dynamic Tables (auto-refresh)
+# dbt is used for DDL generation, testing, and documentation
+models:
+  ontario_health:
+    staging:
+      +materialized: view  # Staging is lightweight, use views
+      +schema: staging
+    
+    marts:
+      surveillance:
+        # For surveillance data, we manually create Dynamic Tables
+        # dbt models here are for documentation and testing only
+        +materialized: view
+        +schema: marts_surveillance
+      
+      historical:
+        +materialized: view  # Historical data is static, views are fine
+        +schema: marts_historical
+      
+      ops:
+        +materialized: view
+        +schema: marts_ops

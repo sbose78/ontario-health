@@ -1,0 +1,99 @@
+version: 2
+
+models:
+  - name: stg_wastewater
+    description: "Staging view for wastewater surveillance with quality checks"
+    tests:
+      - dbt_utils.recency:
+          datepart: day
+          field: week_start
+          interval: 14
+          severity: warn
+    
+    columns:
+      - name: id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      
+      - name: epi_year
+        description: "Epidemiological year"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 2020
+              max_value: 2030
+      
+      - name: epi_week
+        description: "Epidemiological week (1-53)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 53
+      
+      - name: virus_name
+        description: "Virus name"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['COVID-19', 'Influenza A', 'Influenza B', 'RSV']
+      
+      - name: viral_load_avg
+        description: "Average viral load (must be non-negative)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1000
+              severity: warn
+      
+      - name: location
+        description: "Wastewater site location"
+        tests:
+          - not_null
+  
+  - name: stg_ed_wait_times
+    description: "ED wait times with quality validation"
+    tests:
+      - dbt_utils.recency:
+          datepart: hour
+          field: scraped_at
+          interval: 6
+          severity: error
+    
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+      
+      - name: hospital_code
+        description: "Hospital identifier"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['georgetown', 'milton', 'oakville']
+      
+      - name: hospital_name
+        description: "Full hospital name"
+        tests:
+          - not_null
+      
+      - name: wait_total_minutes
+        description: "Total wait time (sanity check: max 12 hours)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 720
+              severity: warn
+      
+      - name: wait_severity
+        description: "Wait severity classification"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Low', 'Moderate', 'High', 'Critical']
+
