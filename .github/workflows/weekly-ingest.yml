@@ -1,8 +1,16 @@
 name: Ontario Health Data Ingestion
 
 on:
-  # Wastewater: Weekly on Wednesdays at 6am EST (11:00 UTC)
-  # ED Wait Times: Every 3 hours (8 times/day)
+  # Run on merge to main
+  push:
+    branches:
+      - main
+    paths:
+      - 'pipeline/**'
+      - 'sql/**'
+      - '.github/workflows/weekly-ingest.yml'
+  
+  # Scheduled runs
   schedule:
     - cron: '0 11 * * 3'       # Wednesday 6am EST - wastewater
     - cron: '0 */3 * * *'      # Every 3 hours - ED wait times
@@ -50,12 +58,18 @@ jobs:
       - name: Determine dataset to ingest
         id: dataset
         run: |
-          # For scheduled runs: Wednesday = wastewater, other times = ed_wait_times
+          # Determine what to run based on trigger
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            # Manual trigger - use selected dataset
             echo "dataset=${{ inputs.dataset }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            # Merge to main - run all ingestors to refresh data
+            echo "dataset=all" >> $GITHUB_OUTPUT
           elif [ "$(date +%u)" == "3" ] && [ "$(date +%H)" == "11" ]; then
+            # Wednesday 6am - wastewater
             echo "dataset=wastewater" >> $GITHUB_OUTPUT
           else
+            # Other scheduled times - ED wait times
             echo "dataset=ed_wait_times" >> $GITHUB_OUTPUT
           fi
 
