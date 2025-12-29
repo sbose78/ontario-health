@@ -22,6 +22,19 @@ def run_school_cases():
     print("="*60)
     
     ingestor = SchoolCasesIngestor()
+    
+    # Skip if already loaded (static historical data)
+    if ingestor.check_already_loaded():
+        print(f"\n✓ School cases already loaded - skipping")
+        print(f"  (This is historical 2021 data, no updates expected)")
+        return {
+            "dataset": "school_cases",
+            "status": "SKIPPED",
+            "records_fetched": 0,
+            "records_inserted": 0,
+            "error": "Already loaded"
+        }
+    
     return ingestor.run()
 
 
@@ -34,6 +47,19 @@ def run_outbreaks():
     print("="*60)
     
     ingestor = OutbreaksIngestor(filter_to_schools=True)
+    
+    # Skip if already loaded (static historical data)
+    if ingestor.check_already_loaded():
+        print(f"\n✓ Outbreaks already loaded - skipping")
+        print(f"  (This is historical 2021 data, no updates expected)")
+        return {
+            "dataset": "outbreaks",
+            "status": "SKIPPED",
+            "records_fetched": 0,
+            "records_inserted": 0,
+            "error": "Already loaded"
+        }
+    
     return ingestor.run()
 
 
@@ -146,16 +172,20 @@ def main():
     
     all_success = True
     for name, result in results:
-        status_emoji = "✓" if result["status"] == "SUCCESS" else "✗"
+        if result["status"] == "SUCCESS":
+            status_emoji = "✓"
+        elif result["status"] == "SKIPPED":
+            status_emoji = "⊘"
+        else:
+            status_emoji = "✗"
+            all_success = False
+        
         print(f"\n{status_emoji} {name}:")
         print(f"    Status: {result['status']}")
         print(f"    Fetched: {result['records_fetched']}")
         print(f"    Inserted: {result['records_inserted']}")
-        if result.get("error"):
-            print(f"    Note: {result['error']}")
-        
-        if result["status"] != "SUCCESS":
-            all_success = False
+        if result.get("error") and result["status"] != "SKIPPED":
+            print(f"    Error: {result['error']}")
     
     print(f"\nCompleted at: {datetime.utcnow().isoformat()}Z")
     

@@ -22,6 +22,26 @@ class SchoolCasesIngestor(BaseIngestor):
         # This may need to be updated if the dataset structure changes
         self._resource_id = None
     
+    def check_already_loaded(self) -> bool:
+        """Check if school cases data already exists in Snowflake."""
+        try:
+            from config import get_snowflake_connection, SNOWFLAKE_DATABASE, SCHEMA_RAW
+            conn = get_snowflake_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(f"USE DATABASE {SNOWFLAKE_DATABASE}")
+            cursor.execute(f"USE SCHEMA {SCHEMA_RAW}")
+            cursor.execute("SELECT COUNT(*) FROM SCHOOL_CASES")
+            
+            count = cursor.fetchone()[0]
+            cursor.close()
+            conn.close()
+            
+            return count > 0
+            
+        except Exception:
+            return False
+    
     @property
     def target_table(self) -> str:
         return "SCHOOL_CASES"
@@ -130,6 +150,12 @@ class SchoolCasesIngestor(BaseIngestor):
 def main():
     """Run school cases ingestion."""
     ingestor = SchoolCasesIngestor()
+    
+    # Skip if already loaded (static historical data)
+    if ingestor.check_already_loaded():
+        print(f"\n✓ School cases already loaded - skipping")
+        print(f"  (This is historical 2021 data, no updates expected)")
+        return
     
     try:
         result = ingestor.run()

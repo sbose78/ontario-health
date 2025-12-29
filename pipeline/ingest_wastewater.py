@@ -46,20 +46,62 @@ class WastewaterIngestor:
         self.province_filter = province_filter
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     
+    def get_max_week_in_snowflake(self) -> tuple[int, int] | None:
+        """Get the latest (epi_year, epi_week) already in Snowflake."""
+        try:
+            conn = get_snowflake_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(f"USE DATABASE {SNOWFLAKE_DATABASE}")
+            cursor.execute(f"USE SCHEMA {SCHEMA_RAW}")
+            
+            # Check if table exists and has data
+            cursor.execute("""
+                SELECT MAX(epi_year), MAX(epi_week)
+                FROM WASTEWATER_SURVEILLANCE
+                WHERE epi_year = (SELECT MAX(epi_year) FROM WASTEWATER_SURVEILLANCE)
+            """)
+            
+            result = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            if result and result[0] is not None:
+                return (result[0], result[1])
+            return None
+            
+        except Exception as e:
+            print(f"  Note: Could not check existing data: {e}")
+            return None
+    
     def fetch_data(self) -> pd.DataFrame:
-        """Fetch wastewater data from Health Canada."""
+        """Fetch wastewater data from Health Canada (incremental)."""
         print(f"Fetching wastewater data from Health Canada...")
+        
+        # Check what we already have
+        max_week = self.get_max_week_in_snowflake()
+        if max_week:
+            print(f"  Latest data in Snowflake: Year {max_week[0]}, Week {max_week[1]}")
         
         response = requests.get(self.DATA_URL, timeout=120)
         response.raise_for_status()
         
         df = pd.read_csv(pd.io.common.StringIO(response.text))
-        print(f"  Total records: {len(df):,}")
+        print(f"  Total records from source: {len(df):,}")
         
         # Filter by province if specified
         if self.province_filter:
             df = df[df["province"] == self.province_filter]
             print(f"  Filtered to {self.province_filter}: {len(df):,} records")
+        
+        # Incremental: only fetch weeks newer than what we have
+        if max_week:
+            year, week = max_week
+            df = df[
+                (df["EpiYear"] > year) | 
+                ((df["EpiYear"] == year) & (df["EpiWeek"] > week))
+            ]
+            print(f"  Incremental filter (after Year {year} Week {week}): {len(df):,} new records")
         
         return df
     
