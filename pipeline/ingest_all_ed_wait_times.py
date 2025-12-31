@@ -20,7 +20,15 @@ from ingest_ed_wait_times import EDWaitTimesIngestor
 
 
 class MultiNetworkEDScraper:
-    """Scrape ED wait times from multiple Ontario hospital networks."""
+    """
+    Scrape ED wait times from multiple Ontario hospital networks.
+    
+    Current Support: 3 Halton Healthcare hospitals (Oakville, Milton, Georgetown)
+    
+    Future Expansion: Framework supports additional networks, but most Ontario hospitals
+    use JavaScript-rendered dashboards or don't publish live wait times.
+    Requires Selenium/Playwright for full province coverage.
+    """
     
     def __init__(self):
         self.session = requests.Session()

@@ -86,7 +86,10 @@ This separation makes it clear which data is current vs archived.
 
 **Refresh**: Every 3 hours via GitHub Actions
 
-**Hospitals**: Georgetown, Milton, Oakville
+**Coverage**: 3 Halton Healthcare hospitals
+- Georgetown Hospital
+- Milton District Hospital
+- Oakville Trafalgar Memorial Hospital
 
 **Key Field**: `wait_total_minutes` - physician wait time
 
@@ -95,6 +98,12 @@ This separation makes it clear which data is current vs archived.
 - Moderate: 61-120 min
 - High: 121-240 min
 - Critical: >240 min
+
+**Expansion Limitations**:
+Most Ontario hospitals use JavaScript-rendered dashboards or don't publish live wait times.
+Of 163 EDs in Ontario, only ~10-15 have scrapeable static HTML.
+Framework supports multi-network ingestion (see `pipeline/hospital_scrapers/`),
+but expanding beyond Halton requires Selenium/Playwright for JavaScript sites.
 
 **Risk**: HTML structure changes break the scraper. Check for zero records in `RAW.ED_WAIT_TIMES`.
 
