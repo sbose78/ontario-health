@@ -19,3 +19,7 @@ dbt-snowflake>=1.11.0
 pytest>=7.0.0
 pytest-mock>=3.10.0
 
+# Browser automation for JavaScript sites
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+
